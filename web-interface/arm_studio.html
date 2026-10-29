@@ -1,0 +1,748 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ARM / STUDIO · 4-axis</title>
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+  }
+}
+</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600&display=swap">
+<style>
+:root{
+  --bg:#060a14; --panel:rgba(17,25,44,.70); --panel2:rgba(8,13,26,.72);
+  --line:rgba(130,160,220,.15); --line2:rgba(130,160,220,.30);
+  --txt:#eaf1ff; --mut:#8ea2c8; --acc:#5df2cf; --acc2:#7c8cff; --warn:#ffc86b; --bad:#ff7d8c;
+  --mono:'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+}
+* { box-sizing: border-box; }
+html { scrollbar-color:#2a3a5e transparent; scrollbar-width:thin; }
+body { margin:0; min-height:100vh; color:var(--txt); font:14.5px/1.45 'Inter',system-ui,-apple-system,'Segoe UI',sans-serif;
+  background:
+    radial-gradient(1100px 560px at 88% -12%, rgba(124,140,255,.20), transparent 60%),
+    radial-gradient(900px 520px at -8% 6%, rgba(93,242,207,.13), transparent 55%),
+    radial-gradient(800px 600px at 50% 120%, rgba(60,90,170,.18), transparent 60%),
+    var(--bg);
+  background-attachment:fixed; -webkit-font-smoothing:antialiased; }
+::selection { background:rgba(93,242,207,.3); }
+::-webkit-scrollbar { width:8px; height:8px; } ::-webkit-scrollbar-thumb { background:#2a3a5e; border-radius:99px; } ::-webkit-scrollbar-track { background:transparent; }
+
+header { position:sticky; top:0; z-index:20; padding:16px 26px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;
+  background:rgba(6,10,20,.72); backdrop-filter:blur(16px) saturate(140%); -webkit-backdrop-filter:blur(16px) saturate(140%);
+  border-bottom:1px solid var(--line); }
+h1 { margin:0; font-size:25px; font-weight:800; letter-spacing:-.035em; }
+h1 span { background:linear-gradient(90deg,var(--acc),var(--acc2)); -webkit-background-clip:text; background-clip:text; color:transparent; }
+p, label, small { color:var(--mut); margin:0; }
+header p { font-size:12.5px; margin-top:3px; letter-spacing:.01em; }
+b { font-weight:700; }
+code { font-family:var(--mono); font-size:.9em; color:var(--acc); background:rgba(93,242,207,.08); padding:1px 5px; border-radius:5px; }
+
+#conn { font-size:12.5px; padding:7px 14px; border-radius:99px; border:1px solid var(--line2); background:var(--panel2); max-width:520px; font-weight:600; letter-spacing:.01em; }
+#conn.ok { color:var(--acc); border-color:rgba(93,242,207,.45); box-shadow:0 0 18px -4px rgba(93,242,207,.55); }
+#conn.bad { color:var(--bad); border-color:rgba(255,125,140,.4); }
+#conn.demo { color:var(--warn); border-color:rgba(255,200,107,.35); }
+
+main { max-width:1560px; margin:auto; padding:20px; display:grid; grid-template-columns:1.5fr 1fr; gap:20px; align-items:start; }
+.panel { border:1px solid var(--line); border-radius:22px; background:var(--panel); overflow:hidden;
+  backdrop-filter:blur(12px); -webkit-backdrop-filter:blur(12px);
+  box-shadow:0 30px 60px -28px rgba(0,0,0,.8), inset 0 1px 0 rgba(255,255,255,.05); }
+.panelhead { padding:14px 18px; border-bottom:1px solid var(--line); display:flex; justify-content:space-between; gap:8px; align-items:center; flex-wrap:wrap;
+  background:linear-gradient(180deg,rgba(255,255,255,.035),rgba(255,255,255,0)); }
+.panelhead b { font-size:12px; letter-spacing:.2em; font-weight:700; color:#cfe0ff; }
+.panelhead:last-child { border-bottom:0; border-top:1px solid var(--line); }
+
+#scene { height:620px; position:relative; background:radial-gradient(120% 90% at 50% 0%, #131c33 0%, #080c18 70%); }
+#scene::after { content:''; position:absolute; inset:0; pointer-events:none;
+  background:radial-gradient(120% 100% at 50% 50%, transparent 55%, rgba(3,6,14,.55) 100%); }
+#scene canvas { width:100%; height:100%; display:block; }
+#hint { position:absolute; right:14px; bottom:12px; z-index:2; font:10.5px var(--mono); letter-spacing:.12em; color:#7d90b8; pointer-events:none; text-transform:uppercase;
+  padding:5px 10px; border-radius:99px; background:rgba(6,10,20,.55); border:1px solid var(--line); backdrop-filter:blur(6px); }
+#followBadge { position:absolute; left:14px; top:14px; z-index:2; padding:7px 13px; border-radius:99px; background:linear-gradient(90deg,var(--acc),#4fd0ff); color:#05131a; font-weight:800; font-size:11.5px; letter-spacing:.06em; display:none; pointer-events:none; box-shadow:0 0 24px -2px rgba(93,242,207,.7); }
+
+.controls { padding:18px; display:grid; gap:20px; }
+.controls > section { padding-bottom:20px; border-bottom:1px dashed var(--line); }
+.controls > section:last-of-type { border-bottom:0; padding-bottom:0; }
+.heading { display:flex; align-items:center; gap:9px; color:var(--acc); font-size:11px; font-weight:800; letter-spacing:.22em; margin-bottom:12px; text-transform:uppercase; }
+.heading::before { content:''; width:16px; height:2px; border-radius:2px; background:linear-gradient(90deg,var(--acc),transparent); }
+
+.row3 { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; }
+.row4 { display:grid; grid-template-columns:repeat(4,1fr); gap:10px; }
+.row6 { display:grid; grid-template-columns:repeat(6,1fr); gap:6px; }
+.cell { background:linear-gradient(160deg,rgba(255,255,255,.05),rgba(255,255,255,.01)); border:1px solid var(--line); border-radius:14px; padding:11px 12px; transition:border-color .2s, transform .2s, box-shadow .2s; }
+.cell:hover { border-color:rgba(93,242,207,.4); box-shadow:0 8px 24px -14px rgba(93,242,207,.6); transform:translateY(-1px); }
+.cell small { display:block; font-size:10px; letter-spacing:.12em; text-transform:uppercase; font-weight:600; }
+.cell b { display:block; font:600 20px var(--mono); margin-top:5px; color:#fff; font-variant-numeric:tabular-nums; letter-spacing:-.02em; }
+
+input[type=number], select, input[type=text] { width:100%; margin-top:5px; padding:10px 11px; color:#fff; background:rgba(4,8,18,.65); border:1px solid var(--line); border-radius:11px; font:inherit; font-family:var(--mono); font-size:13.5px; outline:none; transition:border-color .2s, box-shadow .2s; }
+select { font-family:inherit; cursor:pointer; }
+input[type=number]:focus, select:focus, input[type=text]:focus { border-color:var(--acc); box-shadow:0 0 0 3px rgba(93,242,207,.14); }
+label { font-size:12.5px; }
+
+button { padding:10px 15px; border-radius:12px; cursor:pointer; border:1px solid var(--line2); background:linear-gradient(180deg,rgba(255,255,255,.08),rgba(255,255,255,.03)); color:#eaf1ff; font:inherit; font-weight:650; font-size:13px; letter-spacing:.01em; transition:transform .15s, box-shadow .2s, border-color .2s, background .2s; }
+button:hover { transform:translateY(-1px); border-color:rgba(93,242,207,.5); box-shadow:0 8px 22px -12px rgba(93,242,207,.55); }
+button:active { transform:translateY(0) scale(.98); }
+button:disabled { opacity:.45; cursor:not-allowed; transform:none; box-shadow:none; }
+button.primary { background:linear-gradient(135deg,var(--acc),#3fc8ff); color:#04141a; border-color:transparent; box-shadow:0 10px 26px -12px rgba(93,242,207,.8); }
+button.primary:hover { box-shadow:0 12px 30px -10px rgba(93,242,207,.95); filter:brightness(1.06); }
+button.danger { border-color:rgba(255,125,140,.4); color:var(--bad); background:rgba(255,125,140,.06); }
+button.danger:hover { border-color:var(--bad); box-shadow:0 8px 22px -12px rgba(255,125,140,.7); }
+button.on { background:linear-gradient(135deg,var(--warn),#ff9f5a); color:#241a00; border-color:transparent; box-shadow:0 0 22px -4px rgba(255,200,107,.7); }
+.buttons { display:flex; gap:9px; flex-wrap:wrap; margin-top:12px; }
+.opt { display:flex; gap:9px; align-items:center; margin:8px 0; color:#cfdcf5; }
+.opt label { color:#cfdcf5; cursor:pointer; }
+input[type=checkbox] { accent-color:var(--acc); width:16px; height:16px; cursor:pointer; }
+
+input[type=range] { -webkit-appearance:none; appearance:none; width:100%; height:6px; margin:12px 0 8px; border-radius:99px; background:rgba(140,165,220,.22); outline:none; cursor:pointer; }
+input[type=range]::-webkit-slider-thumb { -webkit-appearance:none; appearance:none; width:20px; height:20px; border-radius:50%; background:radial-gradient(circle at 35% 30%,#fff,var(--acc) 60%); border:2px solid #0a1424; box-shadow:0 0 0 3px rgba(93,242,207,.25), 0 4px 12px rgba(0,0,0,.5); transition:box-shadow .15s; }
+input[type=range]::-webkit-slider-thumb:hover { box-shadow:0 0 0 6px rgba(93,242,207,.25), 0 4px 12px rgba(0,0,0,.5); }
+input[type=range]::-moz-range-thumb { width:18px; height:18px; border-radius:50%; background:var(--acc); border:2px solid #0a1424; box-shadow:0 0 0 3px rgba(93,242,207,.25); }
+input[type=range]::-moz-range-track { height:6px; border-radius:99px; background:rgba(140,165,220,.22); }
+
+.status { padding:12px 14px; border-radius:12px; background:rgba(4,8,18,.6); border:1px solid var(--line); border-left:3px solid var(--acc); color:var(--acc); font:12.5px/1.5 var(--mono); min-height:44px; }
+.legend { display:flex; gap:14px; flex-wrap:wrap; font-size:12px; margin-top:10px; }
+.legend i { display:inline-block; width:9px; height:9px; border-radius:50%; margin-right:6px; box-shadow:0 0 10px currentColor; }
+.legend span:nth-child(1) i { color:#ff4d6d; } .legend span:nth-child(2) i { color:#4da3ff; } .legend span:nth-child(3) i { color:#6ee7a0; }
+
+details { background:rgba(4,8,18,.5); border:1px solid var(--line); border-radius:14px; padding:12px 14px; transition:border-color .2s; }
+details[open] { border-color:var(--line2); }
+summary { cursor:pointer; color:#b6c6e6; font-weight:600; font-size:13px; list-style:none; display:flex; align-items:center; gap:8px; }
+summary::-webkit-details-marker { display:none; }
+summary::before { content:'›'; display:inline-block; color:var(--acc); font-size:18px; line-height:1; transition:transform .2s; }
+details[open] > summary::before { transform:rotate(90deg); }
+summary:hover { color:#fff; }
+#log { height:150px; overflow:auto; font:12px var(--mono); background:#04070f; border:1px solid var(--line); border-radius:10px; padding:10px; margin:10px 0; white-space:pre-wrap; color:var(--mut); }
+#log .tx { color:var(--warn); } #log .rx { color:var(--acc); } #log .err { color:var(--bad); }
+@media(max-width:980px){ main{grid-template-columns:1fr; padding:12px; gap:14px;} #scene{height:440px;} header{padding:12px 16px;} }
+</style>
+</head>
+<body>
+<header>
+  <div>
+    <h1>ARM <span>/</span> STUDIO</h1>
+    <p>4-axis arm · 4 servos · base · shoulder · elbow · gripper · ESP32 + PCA9685 over USB</p>
+  </div>
+  <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+    <span id="conn" class="demo">● not connected</span>
+    <label style="display:flex;align-items:center;gap:6px">baud
+      <select id="baud" style="width:auto;margin:0;padding:6px"><option>115200</option><option>9600</option></select></label>
+    <button id="connect" class="primary">Connect arm (USB)</button>
+  </div>
+</header>
+
+<main>
+<section class="panel">
+  <div class="panelhead"><b>3D WORKSPACE</b>
+    <span style="display:flex;gap:8px"><button id="followBtn">◎ Follow cursor (F)</button><button id="home2" class="primary" style="padding:8px 12px">⟲ Home</button></span></div>
+  <div id="scene"><div id="followBadge">FOLLOWING CURSOR · F or Esc to stop</div><div id="hint">drag the gizmo arrows · orbit with the background · wheel = zoom</div></div>
+  <div class="panelhead"><small id="dims"></small><small id="hoverinfo">—</small></div>
+</section>
+
+<section class="panel">
+  <div class="panelhead"><b>CONTROL</b><small>mm / degrees</small></div>
+  <div class="controls">
+
+    <section>
+      <div class="heading">01 / TARGET (end of forearm)</div>
+      <div class="row3">
+        <label>X (mm)<input id="ix" type="number" step="5" value="64"></label>
+        <label>Y (mm)<input id="iy" type="number" step="5" value="0"></label>
+        <label>Z (mm)<input id="iz" type="number" step="5" value="115"></label>
+      </div>
+      <div class="legend">
+        <span><i style="background:#ff4d6d"></i>X forward</span>
+        <span><i style="background:#4da3ff"></i>Y left (away from you)</span>
+        <span><i style="background:#6ee7a0"></i>Z up</span>
+      </div>
+      <div class="buttons"><button class="primary" id="go">Go to X, Y, Z</button></div>
+      <div class="opt" style="margin-top:12px"><input type="checkbox" id="live" checked><label for="live">Move the real arm live while dragging</label></div>
+      <div class="opt"><input type="checkbox" id="hw" checked><label for="hw">Send commands to the arm (untick to rehearse on screen only)</label></div>
+    </section>
+
+    <section>
+      <div class="heading">02 / CURSOR CONTROL</div>
+      <p style="font-size:13px;margin-bottom:8px">Press <b>F</b> (or the button above) and just move the mouse: the target, the on-screen arm and the real arm follow your cursor.</p>
+      <label>Cursor moves the target on…
+        <select id="plane">
+          <option value="screen">the screen plane (up/down/left/right as you see it)</option>
+          <option value="table">the table plane (X/Y) · mouse wheel = height</option>
+        </select></label>
+    </section>
+
+    <section>
+      <div class="heading">03 / INVERSE KINEMATICS → SERVO ANGLES</div>
+      <div class="row3">
+        <div class="cell"><small>YAW</small><b id="t1">—</b></div>
+        <div class="cell"><small>SHOULDER</small><b id="t2">—</b></div>
+        <div class="cell"><small>ELBOW</small><b id="t3">—</b></div>
+      </div>
+      <div class="row3" style="margin-top:9px">
+        <div class="cell"><small>BASE servo</small><b id="s1">—</b></div>
+        <div class="cell"><small>SHOULDER servo</small><b id="s2">—</b></div>
+        <div class="cell"><small>ELBOW servo</small><b id="s3">—</b></div>
+      </div>
+      <small style="display:block;margin-top:6px">Same maths as <code>solveIK()</code> in the ESP32 sketch (shoulder = upper arm above horizontal, elbow = forearm bent up from the upper arm).</small>
+    </section>
+
+    <section>
+      <div class="heading">04 / GRIPPER</div>
+      <label>Gripper <b id="gripv">0</b> % <small>(0 open · 100 closed)</small></label>
+      <input id="grip" type="range" min="0" max="100" value="0">
+    </section>
+
+    <section>
+      <div class="heading">05 / ACTIONS</div>
+      <div class="buttons">
+        <button id="home" class="primary">⟲ Home (default pose)</button>
+        <button id="stop" class="danger">■ Stop</button>
+        <button id="reset">Reset view</button>
+      </div>
+      <div id="status" class="status" style="margin-top:10px">Drag the gizmo or press F and move the cursor.</div>
+    </section>
+
+    <details>
+      <summary>Serial console (send any firmware command)</summary>
+      <div id="log"></div>
+      <div style="display:flex;gap:8px"><input id="cmd" type="text" placeholder="e.g.  WHERE   or   XYZ 10 0 8   or   HELP"><button id="sendCmd">Send</button></div>
+    </details>
+
+    <details>
+      <summary>Arm dimensions (must match the sketch)</summary>
+      <p style="margin:8px 0;font-size:13px">Same values as <code>BASE_HEIGHT, LINK1, LINK2</code> in the ESP32 sketch (the sketch is in cm, this page is in mm). Servo offsets/limits are in the script header of this page and the sketch.</p>
+      <div class="row3">
+        <label>Base<input id="cLb" type="number" value="43"></label>
+        <label>L1<input id="cL1" type="number" value="64"></label>
+        <label>L2<input id="cL2" type="number" value="72"></label>
+      </div>
+    </details>
+
+    <details>
+      <summary>Use the exact parts (load STL files)</summary>
+      <p style="margin:8px 0;font-size:13px">Pick the arm part your STL files belong to and load them. The built-in stand-in for that part is hidden and your mesh moves with the joint. Use the offset / rotation boxes (mm, deg, relative to the joint axis) to line it up.</p>
+      <label>Part
+        <select id="partSel">
+          <option value="base">Base plate / bearing (fixed)</option>
+          <option value="yaw">Turret (rotates with base servo)</option>
+          <option value="shoulder">Upper arm (shoulder joint)</option>
+          <option value="elbow">Forearm (elbow joint)</option>
+          <option value="gripper">Gripper</option>
+        </select></label>
+      <input id="stl" type="file" accept=".stl" multiple style="margin-top:8px;color:#9aabc9">
+      <div class="row6" style="margin-top:8px">
+        <label>x<input class="tf" data-k="0" type="number" step="1" value="0"></label>
+        <label>y<input class="tf" data-k="1" type="number" step="1" value="0"></label>
+        <label>z<input class="tf" data-k="2" type="number" step="1" value="0"></label>
+        <label>rx°<input class="tf" data-k="3" type="number" step="90" value="0"></label>
+        <label>ry°<input class="tf" data-k="4" type="number" step="90" value="0"></label>
+        <label>rz°<input class="tf" data-k="5" type="number" step="90" value="0"></label>
+      </div>
+      <div class="buttons"><button id="clearPart" class="danger">Remove loaded meshes from this part</button></div>
+    </details>
+  </div>
+</section>
+</main>
+
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { TransformControls } from 'three/addons/controls/TransformControls.js';
+import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
+import { STLLoader } from 'three/addons/loaders/STLLoader.js';
+
+/* ======================================================================
+   CONFIG - identical to Robot_Arm_ESP32.ino (sketch is in cm, this page in mm)
+   Robot frame (mm, deg): origin on the table under the base axis,
+   +X forward, +Y left, +Z up.  HOME = base/shoulder/elbow servos at 90.
+   servo = off + dir * joint     joints: yaw (turn left of +x),
+   s (upper arm above horizontal), e (forearm bent up from the upper arm, 0 = straight)
+   ====================================================================== */
+const CFG = { Lb: 43, L1: 64, L2: 72 };
+const MAP = {
+  dir: [1, 1, 1],
+  off: [90, 90, 0],
+  min: [0, 5, 5, 30],       // base, shoulder, elbow, gripper
+  max: [180, 175, 175, 110],
+};
+const LIVE_SPEED = 90;                       // deg/s, same as LIVE_SPEED_DPS in the sketch
+const R = Math.PI / 180;
+const $ = id => document.getElementById(id);
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+
+/* ============================ kinematics ============================ */
+function fk(j) {
+  const { Lb, L1, L2 } = CFG;
+  const a1 = j.s * R, a2 = (j.s + j.e) * R;
+  const r1 = L1 * Math.cos(a1), z1 = Lb + L1 * Math.sin(a1);
+  const r2 = r1 + L2 * Math.cos(a2), z2 = z1 + L2 * Math.sin(a2);
+  const c = Math.cos(j.yaw * R), s = Math.sin(j.yaw * R);
+  return { sh: [0, 0, Lb], el: [r1 * c, r1 * s, z1], tip: [r2 * c, r2 * s, z2] };
+}
+const servosOf = j => [MAP.off[0] + MAP.dir[0] * j.yaw, MAP.off[1] + MAP.dir[1] * j.s, MAP.off[2] + MAP.dir[2] * j.e];
+
+// IK = solveIK() of the sketch: yaw = atan2(y,x); e = acos(law of cosines);
+//      s = atan2(h,r) - atan2(L2 sin e, L1 + L2 cos e)
+function ik(x, y, z) {
+  const { Lb, L1, L2 } = CFG;
+  const rr = Math.hypot(x, y);
+  if (rr < 3) return null;                              // on the base axis: yaw undefined
+  const h = z - Lb, d2 = rr * rr + h * h, d = Math.sqrt(d2);
+  if (d > L1 + L2 || d < Math.abs(L1 - L2) || d < 0.001) return null;
+  const e = Math.acos(clamp((d2 - L1 * L1 - L2 * L2) / (2 * L1 * L2), -1, 1));
+  const s = Math.atan2(h, rr) - Math.atan2(L2 * Math.sin(e), L1 + L2 * Math.cos(e));
+  if (z < 5 || Lb + L1 * Math.sin(s) < 5) return null;  // arm would hit the table (0.5 cm in the sketch)
+  const j = { yaw: Math.atan2(y, x) / R, s: s / R, e: e / R };
+  const sv = servosOf(j);
+  for (let i = 0; i < 3; i++) if (sv[i] < MAP.min[i] - .01 || sv[i] > MAP.max[i] + .01) return null;
+  return j;
+}
+
+/* ============================== scene =============================== */
+const host = $('scene');
+const scene = new THREE.Scene();
+{
+  const bg = document.createElement('canvas'); bg.width = 4; bg.height = 512;
+  const c = bg.getContext('2d'), gr = c.createLinearGradient(0, 0, 0, 512);
+  gr.addColorStop(0, '#16213d'); gr.addColorStop(.55, '#0b1226'); gr.addColorStop(1, '#060a14');
+  c.fillStyle = gr; c.fillRect(0, 0, 4, 512);
+  const t = new THREE.CanvasTexture(bg); t.colorSpace = THREE.SRGBColorSpace;
+  scene.background = t;
+  scene.fog = new THREE.Fog(0x080c18, 450, 1100);
+}
+const camera = new THREE.PerspectiveCamera(42, 1, 1, 4000);
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.1;
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+host.appendChild(renderer.domElement);
+const dom = renderer.domElement;
+const orbit = new OrbitControls(camera, dom);
+orbit.enableDamping = true;
+const HOME_CAM = () => { camera.position.set(190, 150, 220); orbit.target.set(30, 55, 0); orbit.update(); };
+HOME_CAM();
+scene.add(new THREE.HemisphereLight(0xd9eaff, 0x1b2236, 2.4));
+const dl = new THREE.DirectionalLight(0xffffff, 2.8); dl.position.set(120, 220, 140); scene.add(dl);
+dl.castShadow = true; dl.shadow.mapSize.set(2048, 2048);
+Object.assign(dl.shadow.camera, { left: -220, right: 220, top: 220, bottom: -220, near: 10, far: 700 });
+dl.shadow.bias = -0.0003; dl.shadow.normalBias = 1.2; dl.shadow.radius = 4;
+const rim = new THREE.DirectionalLight(0x5df2cf, 0.8); rim.position.set(-150, 90, -125); scene.add(rim);
+const dl2 = new THREE.DirectionalLight(0x8fb4ff, 1.2); dl2.position.set(-125, 75, -100); scene.add(dl2);
+const dl3 = new THREE.DirectionalLight(0xffffff, 0.9); dl3.position.set(150, 60, 175); scene.add(dl3);
+{
+  const floor = new THREE.Mesh(new THREE.CircleGeometry(320, 96), new THREE.MeshStandardMaterial({ color: 0x0c1322, metalness: .05, roughness: .92 }));
+  floor.rotation.x = -Math.PI / 2; floor.position.y = -.3; floor.receiveShadow = true; scene.add(floor);
+  const grid = new THREE.GridHelper(500, 50, 0x2d4468, 0x16233a);
+  grid.position.y = .1; grid.material.transparent = true; grid.material.opacity = .32; scene.add(grid);
+  [[50, .10], [100, .12], [136, .22]].forEach(([r, o]) => {
+    const rg = new THREE.Mesh(new THREE.RingGeometry(r - .6, r, 128), new THREE.MeshBasicMaterial({ color: 0x5df2cf, transparent: true, opacity: o, depthWrite: false, toneMapped: false }));
+    rg.rotation.x = -Math.PI / 2; rg.position.y = .2; scene.add(rg);
+  });
+}
+
+const mat = (c, m = .15, r = .45) => new THREE.MeshStandardMaterial({ color: c, metalness: m, roughness: r });
+const M = { body: new THREE.MeshPhysicalMaterial({ color: 0xb23a1c, metalness: .05, roughness: .5, clearcoat: .35, clearcoatRoughness: .45 }),
+            servo: mat(0x15171b, .15, .55), horn: mat(0xe9e9ea, .1, .5),
+            metal: mat(0x9aa4b8, .75, .3), dark: mat(0x1a0f0c, .05, .8), ring: mat(0x8f2c14, .1, .55),
+            chrome: mat(0xd5dbe6, .95, .22), vent: mat(0x2c3039, .1, .6), label: mat(0xc54fb2, .1, .45),
+            accent: mat(0x61e6c4, .1, .4), pad: mat(0x2a1410, .1, .85),
+            stl: mat(0xb23a1c, .05, .62) };
+
+const LED = new THREE.MeshBasicMaterial({ color: 0x5df2cf, toneMapped: false });   // glowing accent strips
+// robot frame group: robot (x,y,z) -> three (x, z, -y)
+const world = new THREE.Group(); world.rotation.x = -Math.PI / 2; scene.add(world);
+const toThree = p => new THREE.Vector3(p[0], p[2], -p[1]);
+const fromThree = v => [v.x, -v.z, v.y];
+
+// kinematic chain: each part has a `proc` group (built-in stand-in) and a `custom` group (loaded STLs)
+const PARTS = ['base', 'yaw', 'shoulder', 'elbow', 'gripper'];
+const P = {};
+PARTS.forEach(n => { P[n] = new THREE.Group(); P[n].proc = new THREE.Group(); P[n].custom = new THREE.Group(); P[n].add(P[n].proc, P[n].custom); });
+world.add(P.base, P.yaw);
+P.yaw.add(P.shoulder); P.shoulder.add(P.elbow); P.elbow.add(P.gripper);
+function layout() {
+  P.shoulder.position.set(0, 0, CFG.Lb);
+  P.elbow.position.set(0, 0, CFG.L1);
+  P.gripper.position.set(0, 0, CFG.L2);
+}
+
+/* ---- little geometry helpers (axes are the robot frame: x fwd, y left, z up) ---- */
+const add = (g, m, mt, x = 0, y = 0, z = 0) => { const o = new THREE.Mesh(m, mt); o.position.set(x, y, z); g.add(o); return o; };
+const box = (g, sx, sy, sz, mt, x, y, z, r = 1.5) => add(g, new RoundedBoxGeometry(sx, sy, sz, 2, Math.min(r, sx / 2.1, sy / 2.1, sz / 2.1)), mt, x, y, z);
+function cyl(g, r, len, axis, mt, x, y, z) {
+  const o = add(g, new THREE.CylinderGeometry(r, r, len, 32), mt, x, y, z);
+  if (axis === 'x') o.rotation.z = Math.PI / 2; else if (axis === 'z') o.rotation.x = Math.PI / 2;
+  return o;
+}
+// hobby servo: output shaft at the origin pointing +Y, body below the top face (y<0), long axis along x
+function servo(len, wid, hgt, xdir = 1, label = false) {
+  const g = new THREE.Group();
+  const cx = xdir * (len / 2 - len * .25);
+  box(g, len, hgt, wid, M.servo, cx, -hgt / 2, 0, 2);
+  box(g, len + len * .34, 2, wid, M.servo, cx, -hgt * .3, 0, 1);
+  if (label) box(g, len * .55, hgt * .55, .8, M.label, cx, -hgt / 2, wid / 2 + .2, .3);
+  cyl(g, wid * .45, 2, 'y', M.horn, 0, 1, 0);
+  cyl(g, wid * .15, 3, 'y', M.metal, 0, 2.5, 0);
+  return g;
+}
+const place = (g, o, x, y, z, rx = 0, ry = 0) => { o.position.set(x, y, z); o.rotation.set(rx, ry, 0); g.add(o); return o; };
+
+// tapered "hull of two circles" link, drawn in the x-z plane and extruded along y
+function convexHull(pts) {
+  pts.sort((a, b) => a[0] - b[0] || a[1] - b[1]);
+  const cr = (o, a, b) => (a[0] - o[0]) * (b[1] - o[1]) - (a[1] - o[1]) * (b[0] - o[0]);
+  const lo = [], up = [];
+  for (const p of pts) { while (lo.length >= 2 && cr(lo[lo.length - 2], lo[lo.length - 1], p) <= 0) lo.pop(); lo.push(p); }
+  for (let i = pts.length - 1; i >= 0; i--) { const p = pts[i]; while (up.length >= 2 && cr(up[up.length - 2], up[up.length - 1], p) <= 0) up.pop(); up.push(p); }
+  up.pop(); lo.pop(); return lo.concat(up);
+}
+function linkMesh(g, r0, r1, len, depth, mt, yc = 0, bevel = 3) {
+  const pts = [];
+  for (let i = 0; i < 24; i++) {
+    const a = i / 24 * Math.PI * 2;
+    pts.push([r0 * Math.cos(a), r0 * Math.sin(a)]);
+    pts.push([r1 * Math.cos(a), len + r1 * Math.sin(a)]);
+  }
+  const h = convexHull(pts), sh = new THREE.Shape();
+  h.forEach((p, i) => i ? sh.lineTo(p[0], p[1]) : sh.moveTo(p[0], p[1])); sh.closePath();
+  const geo = new THREE.ExtrudeGeometry(sh, { depth, bevelEnabled: true, bevelThickness: bevel, bevelSize: bevel, bevelSegments: 3, curveSegments: 10 });
+  geo.translate(0, 0, -depth / 2);
+  geo.rotateX(Math.PI / 2);                              // shape y -> robot z, extrusion -> robot y
+  geo.translate(0, yc, 0);
+  const o = new THREE.Mesh(geo, mt); g.add(o); return o;
+}
+
+function buildProc() {
+  const { Lb, L1, L2 } = CFG;
+  PARTS.forEach(n => { const g = P[n].proc; while (g.children.length) { const c = g.children.pop(); c.geometry && c.geometry.dispose(); } });
+  const Y1 = 13, Y2 = 17;                      // flat link plates sit beside the servos (mm)
+
+  /* BASE (fixed): round printed pedestal with three screw ears */
+  let g = P.base.proc;
+  cyl(g, 20, 16, 'z', M.body, 0, 0, 8);
+  cyl(g, 22, 3, 'z', M.body, 0, 0, 1.5);
+  for (const a of [30, 150, 270]) {
+    const x = 25 * Math.cos(a * R), y = 25 * Math.sin(a * R);
+    const e = box(g, 13, 10, 3, M.body, x, y, 1.5, 1.5); e.rotation.z = a * R;
+    cyl(g, 2, 3.2, 'z', M.dark, x, y, 1.6);
+  }
+
+  /* TURRET (yaw): round drum, servo mount block, shoulder servo (black, pink label) */
+  g = P.yaw.proc;
+  cyl(g, 16, 16, 'z', M.body, 0, 0, 24);
+  cyl(g, 17, 2.5, 'z', M.body, 0, 0, 31);
+  box(g, 22, 20, 8, M.body, -4, 0, 35, 2);
+  place(g, servo(23, 12, 22, -1, true), 0, 11, Lb);
+  cyl(g, 2.2, 3, 'y', M.dark, 0, -11.5, Lb);
+
+  /* UPPER ARM: flat printed plate on the shoulder horn, elbow servo at the far end */
+  g = P.shoulder.proc;
+  linkMesh(g, 6, 4.8, L1, 3.5, M.body, Y1, 1);
+  cyl(g, 2, 3, 'y', M.metal, 0, Y1 + 2.5, 0);
+  place(g, servo(23, 12, 20, 1, true), 0, 11, L1, 0, Math.PI / 2);
+
+  /* FOREARM: flat printed plate on the elbow horn */
+  g = P.elbow.proc;
+  linkMesh(g, 5, 4, L2, 3.5, M.body, Y2, 1);
+  cyl(g, 4.5, 1.2, 'y', M.horn, 0, Y2 - 2, 0);
+  cyl(g, 1.8, 3, 'y', M.metal, 0, Y2 + 2.5, 0);
+
+  /* GRIPPER: small pincer at the end of the forearm (finger positions set by updateGrip) */
+  g = P.gripper.proc;
+  const gg = new THREE.Group(); gg.position.y = Y2; g.add(gg);
+  const pl = 10, fl = 22;
+  box(gg, 16, 9, pl, M.body, 0, 0, pl / 2, 2);
+  box(gg, 34, 5, 4, M.body, 0, 0, pl + 1, 1);
+  P.fingers = [];
+  for (let i = 0; i < 2; i++) {
+    const f = new THREE.Group();
+    box(f, 3, 7, fl, M.body, 0, 0, pl + fl / 2, 1);
+    box(f, 1.2, 6.5, fl * .55, M.pad, i ? -1.8 : 1.8, 0, pl + fl * .7, .4);
+    box(f, 5, 7, 3, M.body, i ? 1.2 : -1.2, 0, pl + fl, .8);     // hooked tip
+    gg.add(f); P.fingers.push(f);
+  }
+  const tipMark = add(gg, new THREE.SphereGeometry(2.2, 16, 12), M.accent, 0, 0, 0);
+  tipMark.material = new THREE.MeshBasicMaterial({ color: 0x61e6c4 });
+  world.traverse(o => { if (o.isMesh && o !== tipMark) { o.castShadow = true; o.receiveShadow = true; } });
+  updateGrip();
+}
+let gripPct = 0;
+function updateGrip() {
+  if (!P.fingers) return;
+  const gap = 28 + (4 - 28) * gripPct / 100;
+  P.fingers[0].position.x = -(gap / 2 + 1.5);
+  P.fingers[1].position.x = +(gap / 2 + 1.5);
+}
+
+/* ---- load STL parts ---- */
+const TF = {}; PARTS.forEach(n => TF[n] = [0, 0, 0, 0, 0, 0]);
+function applyTF(n) {
+  const t = TF[n], c = P[n].custom;
+  c.position.set(t[0], t[1], t[2]);
+  c.rotation.set(t[3] * R, t[4] * R, t[5] * R);
+}
+function syncProcVisibility(n) { P[n].proc.visible = P[n].custom.children.length === 0; }
+const stlLoader = new STLLoader();
+$('stl').onchange = async e => {
+  const part = $('partSel').value;
+  for (const f of e.target.files) {
+    try {
+      const geo = stlLoader.parse(await f.arrayBuffer());
+      geo.computeVertexNormals();
+      { const m = new THREE.Mesh(geo, M.stl); m.castShadow = m.receiveShadow = true; P[part].custom.add(m); }
+    } catch (err) { setStatus('Could not read ' + f.name + ' as an STL file.', false); }
+  }
+  applyTF(part); syncProcVisibility(part);
+  e.target.value = '';
+  setStatus('Loaded meshes into "' + part + '". Adjust offset / rotation until it sits on the joint axis.');
+};
+$('partSel').onchange = () => document.querySelectorAll('.tf').forEach(i => i.value = TF[$('partSel').value][+i.dataset.k]);
+document.querySelectorAll('.tf').forEach(i => i.oninput = () => { const n = $('partSel').value; TF[n][+i.dataset.k] = +i.value || 0; applyTF(n); });
+$('clearPart').onclick = () => { const n = $('partSel').value; P[n].custom.clear(); syncProcVisibility(n); };
+
+/* ---- target cube + gizmo ---- */
+const target = new THREE.Mesh(new THREE.BoxGeometry(8, 8, 8), new THREE.MeshStandardMaterial({ color: 0xff9b2f, emissive: 0xff6a00, emissiveIntensity: .7, metalness: .1, roughness: .4 }));
+scene.add(target);
+const floorRing = new THREE.Mesh(new THREE.TorusGeometry(8, .7, 10, 40), new THREE.MeshBasicMaterial({ color: 0x7ad7ff }));
+floorRing.rotation.x = Math.PI / 2; scene.add(floorRing);
+const dropLine = new THREE.Line(new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(), new THREE.Vector3()]),
+  new THREE.LineBasicMaterial({ color: 0x5b7094, transparent: true, opacity: .8 }));
+scene.add(dropLine);
+const gizmo = new TransformControls(camera, dom);
+gizmo.setMode('translate'); gizmo.setSize(.8); gizmo.attach(target); scene.add(gizmo);
+gizmo.addEventListener('dragging-changed', e => { orbit.enabled = !e.value && !follow; if (!e.value) markSend(true); });
+
+/* ============================== state =============================== */
+// default placement = sketch HOME (servos 90/90/90): yaw 0, upper arm horizontal, forearm up
+const HOME = { yaw: 0, s: 0, e: 90 };
+let goal = { ...HOME }, cur = { ...HOME };
+let lastValid = fk(HOME).tip;
+let follow = false;
+
+function setStatus(t, ok = true) { $('status').textContent = t; $('status').style.color = ok ? '#61e6c4' : '#ff8f9b'; }
+function showAngles(j) {
+  ['yaw', 's', 'e'].forEach((k, i) => $('t' + (i + 1)).textContent = j[k].toFixed(1) + '°');
+  servosOf(j).forEach((s, i) => $('s' + (i + 1)).textContent = s.toFixed(0) + '°');
+}
+function showTarget(p) {
+  if (document.activeElement && ['ix', 'iy', 'iz'].includes(document.activeElement.id)) { /* don't overwrite typing */ }
+  else { $('ix').value = p[0].toFixed(0); $('iy').value = p[1].toFixed(0); $('iz').value = p[2].toFixed(0); }
+  $('hoverinfo').textContent = `target X ${p[0].toFixed(0)}  Y ${p[1].toFixed(0)}  Z ${p[2].toFixed(0)} mm`;
+}
+function placeTarget(p) {
+  target.position.copy(toThree(p));
+  floorRing.position.set(target.position.x, .5, target.position.z);
+  dropLine.geometry.setFromPoints([target.position.clone(), new THREE.Vector3(target.position.x, 0, target.position.z)]);
+}
+function updateDims() {
+  $('dims').textContent = `Base ${CFG.Lb} · L1 ${CFG.L1} · L2 ${CFG.L2} mm · max reach ≈ ${CFG.L1 + CFG.L2} mm`;
+}
+
+/* ============================ USB serial ============================ */
+const HAS_SERIAL = 'serial' in navigator;
+const enc = new TextEncoder();
+let port = null, writer = null, reader = null, connected = false, linkOK = false, lastRx = 0, rxBuf = '';
+let dirty = false, forceSend = false, lastSend = 0;
+
+function log(t, cls = '') {
+  const l = $('log'); const d = document.createElement('div'); d.className = cls; d.textContent = t; l.appendChild(d);
+  while (l.children.length > 300) l.removeChild(l.firstChild);
+  l.scrollTop = l.scrollHeight;
+}
+function setConn(cls, text) {
+  const e = $('conn'); e.className = cls; e.textContent = '● ' + text;
+  $('connect').textContent = connected ? 'Disconnect' : 'Connect arm (USB)';
+  $('connect').classList.toggle('primary', !connected);
+}
+function send(line, quiet = false) {
+  if (!connected || !writer) return;
+  writer.write(enc.encode(line + '\n')).catch(() => {});
+  if (!quiet) log('> ' + line, 'tx');
+}
+function markSend(force = false) { dirty = true; if (force) forceSend = true; }
+function streamNow() {
+  if (!$('hw').checked || !connected || !linkOK) return;
+  const t = lastValid;
+  send(`T ${t[0].toFixed(1)} ${t[1].toFixed(1)} ${t[2].toFixed(1)} ${gripPct.toFixed(0)}`, true);   // mm, gripper 0-100 %
+}
+setInterval(() => {
+  if (!dirty) return;
+  const now = performance.now();
+  if (!forceSend && now - lastSend < 70) return;
+  if (!forceSend && !$('live').checked && dragging()) return;
+  dirty = false; forceSend = false; lastSend = now;
+  streamNow();
+}, 35);
+const dragging = () => gizmo.dragging || follow;
+
+function onLine(s) {
+  if (!s) return;
+  lastRx = performance.now();
+  if (s.startsWith('ERR')) { log('< ' + s, 'err'); if (s.includes('unreachable')) setStatus('The arm rejected that target: the link lengths / offsets / limits in this page must match the ESP32 sketch.', false); }
+  else log('< ' + s, 'rx');
+  if (!linkOK) { linkOK = true; setConn('ok', 'arm connected over USB'); setStatus('Connected. The arm moves when you move the target.'); markSend(true); }
+}
+async function readLoop() {
+  const dec = new TextDecoder();
+  try {
+    reader = port.readable.getReader();
+    for (;;) {
+      const { value, done } = await reader.read();
+      if (done) break;
+      rxBuf += dec.decode(value, { stream: true });
+      let i;
+      while ((i = rxBuf.indexOf('\n')) >= 0) { onLine(rxBuf.slice(0, i).trim()); rxBuf = rxBuf.slice(i + 1); }
+    }
+  } catch (e) { /* cable pulled / port closed */ }
+  try { reader.releaseLock(); } catch (e) {}
+  try { writer.releaseLock(); } catch (e) {}
+  try { await port.close(); } catch (e) {}
+  connected = false; linkOK = false; port = null; writer = null; reader = null;
+  setConn('bad', 'disconnected');
+}
+async function openPort(p) {
+  try {
+    port = p;
+    await port.open({ baudRate: +$('baud').value });
+    writer = port.writable.getWriter();
+    connected = true; linkOK = false; lastRx = 0; rxBuf = '';
+    setConn('demo', 'port open, waiting for the ESP32 (it restarts when the port opens)…');
+    readLoop();
+    setTimeout(() => send('?', true), 3500);                    // makes the sketch answer even if it missed its boot message
+    setTimeout(() => { if (connected && !linkOK) setConn('bad', 'no reply: upload Robot_Arm_ESP32.ino and check the baud rate (115200)'); }, 7000);
+  } catch (e) {
+    port = null; connected = false;
+    setConn('bad', 'could not open the port (close the Arduino Serial Monitor / other apps using it)');
+  }
+}
+$('connect').onclick = async () => {
+  if (connected) { try { await reader.cancel(); } catch (e) {} return; }
+  try { await openPort(await navigator.serial.requestPort()); }
+  catch (e) {
+    if (e && e.name === 'NotFoundError') return;                 // picker cancelled
+    const embedded = window.top !== window;
+    setConn('bad', embedded ? 'USB is blocked inside an embedded page: save this page as arm_studio.html and open it in Chrome/Edge' : 'could not open the port picker: ' + (e && e.message ? e.message : e));
+    setStatus(embedded ? 'Web Serial is blocked here because this page is embedded. Open the saved arm_studio.html file directly in Chrome or Edge.' : 'Port picker failed: ' + (e && e.message ? e.message : e), false);
+  }
+};
+if (HAS_SERIAL) {
+  navigator.serial.getPorts().then(ps => { if (ps.length && !connected) openPort(ps[0]); });
+  navigator.serial.addEventListener('connect', e => { if (!connected) openPort(e.target); });
+  setConn('demo', 'not connected (on-screen simulation only)');
+} else {
+  $('connect').disabled = true;
+  setConn('bad', 'Web Serial not supported: open this page in Chrome or Edge (the 3D model still works)');
+}
+$('sendCmd').onclick = () => { const v = $('cmd').value.trim(); if (v) { send(v); $('cmd').value = ''; } };
+$('cmd').addEventListener('keydown', e => { if (e.key === 'Enter') $('sendCmd').click(); });
+
+/* =========================== target -> IK =========================== */
+const lerp3 = (a, b, t) => [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, a[2] + (b[2] - a[2]) * t];
+const reachable = p => ik(p[0], p[1], p[2]);
+function clampToReach(want) {
+  if (reachable(want)) return want;
+  let lo = 0, hi = 1;
+  for (let i = 0; i < 26; i++) { const mid = (lo + hi) / 2; if (reachable(lerp3(lastValid, want, mid))) lo = mid; else hi = mid; }
+  return lerp3(lastValid, want, lo);
+}
+function applyTarget(want, fromDrag) {
+  const p = clampToReach(want);
+  const j = ik(p[0], p[1], p[2]);
+  if (!j) return false;
+  const clamped = Math.hypot(p[0] - want[0], p[1] - want[1], p[2] - want[2]) > 1;
+  goal = j; lastValid = p;
+  placeTarget(p); showTarget(p); showAngles(goal);
+  if (clamped) setStatus('Edge of the reachable workspace (servo limits / link length).', false);
+  else setStatus(`Moving to (${p[0].toFixed(0)}, ${p[1].toFixed(0)}, ${p[2].toFixed(0)}) mm`);
+  markSend(!fromDrag);
+  return !clamped;
+}
+gizmo.addEventListener('objectChange', () => applyTarget(fromThree(target.position), true));
+$('go').onclick = () => applyTarget([+$('ix').value, +$('iy').value, +$('iz').value], false);
+['ix', 'iy', 'iz'].forEach(id => $(id).addEventListener('keydown', e => { if (e.key === 'Enter') $('go').click(); }));
+
+$('grip').oninput = e => { gripPct = +e.target.value; $('gripv').textContent = gripPct; updateGrip(); markSend(); };
+
+function goHome(msg) {
+  goal = { ...HOME };
+  gripPct = 0; $('grip').value = 0; $('gripv').textContent = 0; updateGrip();
+  const t = fk(HOME).tip; lastValid = t; placeTarget(t); showTarget(t); showAngles(goal);
+  setStatus(msg);
+}
+$('home').onclick = () => { goHome('Home: servos 90 / 90 / 90, gripper open.'); markSend(true); };
+$('home2').onclick = () => $('home').click();
+$('stop').onclick = () => { send('STOP'); goal = { ...cur }; setStatus('Stopped.'); };
+$('reset').onclick = HOME_CAM;
+
+/* ======================= follow the cursor (F) ======================= */
+const ray = new THREE.Raycaster(), pl = new THREE.Plane(), hit = new THREE.Vector3(), nd = new THREE.Vector2(), nrm = new THREE.Vector3();
+function setFollow(on) {
+  follow = on;
+  $('followBtn').classList.toggle('on', on);
+  $('followBadge').style.display = on ? 'block' : 'none';
+  orbit.enabled = !on; gizmo.enabled = !on; gizmo.visible = !on;
+  dom.style.cursor = on ? 'crosshair' : '';
+  setStatus(on ? 'Following the cursor: move the mouse over the 3D view.' : 'Cursor follow off.');
+}
+$('followBtn').onclick = () => setFollow(!follow);
+addEventListener('keydown', e => {
+  if (['INPUT', 'SELECT', 'TEXTAREA'].includes(document.activeElement.tagName) && document.activeElement.type !== 'range') return;
+  if (e.key === 'f' || e.key === 'F') setFollow(!follow);
+  if (e.key === 'Escape' && follow) setFollow(false);
+});
+dom.addEventListener('pointermove', e => {
+  if (!follow) return;
+  const r = dom.getBoundingClientRect();
+  nd.set(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1);
+  ray.setFromCamera(nd, camera);
+  if ($('plane').value === 'screen') { camera.getWorldDirection(nrm); pl.setFromNormalAndCoplanarPoint(nrm, target.position); }
+  else pl.setFromNormalAndCoplanarPoint(new THREE.Vector3(0, 1, 0), target.position);
+  if (ray.ray.intersectPlane(pl, hit)) applyTarget(fromThree(hit), true);
+});
+dom.addEventListener('wheel', e => {
+  if (!follow || $('plane').value !== 'table') return;
+  e.preventDefault(); e.stopPropagation();
+  applyTarget([lastValid[0], lastValid[1], lastValid[2] - Math.sign(e.deltaY) * 4], true);
+}, { passive: false, capture: true });
+
+/* ========================= dimensions panel ========================= */
+['cLb', 'cL1', 'cL2'].forEach((id, i) => $(id).onchange = e => {
+  const k = ['Lb', 'L1', 'L2'][i]; CFG[k] = clamp(+e.target.value || CFG[k], 10, 400);
+  buildProc(); layout(); updateDims();
+  goHome('Dimensions changed: back to home. Use the same numbers (in cm) in the ESP32 sketch.');
+});
+
+/* =============================== loop =============================== */
+function draw() {
+  P.yaw.rotation.z = cur.yaw * R;
+  P.shoulder.rotation.y = (90 - cur.s) * R;      // s = upper arm above horizontal
+  P.elbow.rotation.y = -cur.e * R;               // e = forearm bent up from the upper arm
+}
+function resize() {
+  camera.aspect = host.clientWidth / host.clientHeight; camera.updateProjectionMatrix();
+  renderer.setSize(host.clientWidth, host.clientHeight);
+}
+addEventListener('resize', resize);
+let last = performance.now();
+function animate(now) {
+  requestAnimationFrame(animate);
+  const dt = Math.min(.05, (now - last) / 1000); last = now;
+  const s = LIVE_SPEED * dt;
+  for (const k of ['yaw', 's', 'e']) { const d = goal[k] - cur[k]; cur[k] += Math.abs(d) <= s ? d : Math.sign(d) * s; }
+  draw();
+  orbit.update(); renderer.render(scene, camera);
+}
+
+buildProc(); layout(); updateDims(); resize();
+placeTarget(lastValid); showTarget(lastValid); showAngles(goal);
+draw();
+animate(performance.now());
+window.__arm = { fk, ik, servosOf, CFG, MAP, applyTarget, get goal() { return goal; }, get cur() { return cur; } };
+</script>
+</body>
+</html>
