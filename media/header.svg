@@ -1,0 +1,89 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 280" width="1000" height="280" role="img" aria-labelledby="t d">
+  <title id="t">4-DOF Robotic Arm</title>
+  <desc id="d">ESP32, PCA9685, Inverse Kinematics, Browser-based 3D Control. My first robotic arm: designed, 3D-printed, wired and programmed from scratch.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#0b1020"/>
+      <stop offset="1" stop-color="#1b2a4e"/>
+    </linearGradient>
+    <linearGradient id="ttl" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#5df2cf"/>
+      <stop offset="1" stop-color="#7c8cff"/>
+    </linearGradient>
+    <clipPath id="typeClip">
+      <rect x="300" y="132" width="0" height="34">
+        <animate attributeName="width" from="0" to="680" dur="2.6s" begin="0.9s" fill="freeze" calcMode="spline" keySplines="0.4 0 0.2 1" keyTimes="0;1"/>
+      </rect>
+    </clipPath>
+    <pattern id="grid" width="28" height="28" patternUnits="userSpaceOnUse">
+      <path d="M28 0H0V28" fill="none" stroke="#7c8cff" stroke-opacity="0.08"/>
+    </pattern>
+  </defs>
+
+  <rect width="1000" height="280" rx="20" fill="url(#bg)"/>
+  <rect width="1000" height="280" rx="20" fill="url(#grid)"/>
+  <rect x="1" y="1" width="998" height="278" rx="19" fill="none" stroke="#7c8cff" stroke-opacity="0.35"/>
+
+  <!-- animated arm -->
+  <g>
+    <ellipse cx="130" cy="236" rx="62" ry="9" fill="#000" opacity="0.35"/>
+    <rect x="96" y="214" width="68" height="22" rx="6" fill="#8f2c14"/>
+    <rect x="108" y="190" width="44" height="28" rx="8" fill="#b23a1c"/>
+    <g transform="translate(130,190)">
+      <g>
+        <animateTransform attributeName="transform" type="rotate" values="-72;-38;-72" dur="5s" repeatCount="indefinite" calcMode="spline" keyTimes="0;0.5;1" keySplines="0.45 0 0.55 1;0.45 0 0.55 1"/>
+        <rect x="-8" y="-8" width="96" height="16" rx="8" fill="#e0502b"/>
+        <rect x="14" y="-12" width="26" height="24" rx="5" fill="#15171b"/>
+        <g transform="translate(80,0)">
+          <g>
+            <animateTransform attributeName="transform" type="rotate" values="62;22;62" dur="5s" repeatCount="indefinite" calcMode="spline" keyTimes="0;0.5;1" keySplines="0.45 0 0.55 1;0.45 0 0.55 1"/>
+            <rect x="-8" y="-7" width="100" height="14" rx="7" fill="#e0502b"/>
+            <circle cx="0" cy="0" r="9" fill="#15171b"/>
+            <circle cx="0" cy="0" r="3.5" fill="#5df2cf"/>
+            <g transform="translate(92,0)">
+              <rect x="-4" y="-9" width="8" height="18" rx="2" fill="#b23a1c"/>
+              <rect x="2" y="-12" width="22" height="4" rx="2" fill="#5df2cf">
+                <animate attributeName="y" values="-12;-7;-12" dur="2.5s" repeatCount="indefinite"/>
+              </rect>
+              <rect x="2" y="8" width="22" height="4" rx="2" fill="#5df2cf">
+                <animate attributeName="y" values="8;3;8" dur="2.5s" repeatCount="indefinite"/>
+              </rect>
+            </g>
+          </g>
+        </g>
+        <circle cx="0" cy="0" r="10" fill="#15171b"/>
+        <circle cx="0" cy="0" r="4" fill="#5df2cf"/>
+      </g>
+    </g>
+  </g>
+
+  <!-- title -->
+  <g font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif">
+    <text x="300" y="104" font-size="50" font-weight="800" fill="url(#ttl)" letter-spacing="-1" opacity="0">
+      🦾 4-DOF Robotic Arm
+      <animate attributeName="opacity" from="0" to="1" dur="0.8s" begin="0.1s" fill="freeze"/>
+      <animateTransform attributeName="transform" type="translate" from="-30 0" to="0 0" dur="0.8s" begin="0.1s" fill="freeze" calcMode="spline" keyTimes="0;1" keySplines="0.2 0.8 0.2 1"/>
+    </text>
+
+    <!-- typed subtitle -->
+    <g clip-path="url(#typeClip)">
+      <text x="300" y="158" font-size="19" font-weight="600" fill="#e6edff" letter-spacing="0.3">ESP32 · PCA9685 · Inverse Kinematics · Browser-based 3D Control</text>
+    </g>
+    <rect x="300" y="136" width="2.5" height="26" fill="#5df2cf" opacity="0">
+      <animate attributeName="x" from="300" to="980" dur="2.6s" begin="0.9s" fill="freeze" calcMode="spline" keyTimes="0;1" keySplines="0.4 0 0.2 1"/>
+      <animate attributeName="opacity" values="0;1;1;0" keyTimes="0;0.02;0.98;1" dur="2.6s" begin="0.9s" fill="freeze"/>
+    </rect>
+
+    <text x="300" y="206" font-size="16" fill="#9fb0d6" opacity="0" font-style="italic">
+      My first robotic arm: designed, 3D-printed, wired and programmed from scratch.
+      <animate attributeName="opacity" from="0" to="1" dur="1s" begin="3.6s" fill="freeze"/>
+    </text>
+  </g>
+
+  <!-- status dots -->
+  <g transform="translate(300,236)">
+    <circle cx="6" cy="0" r="4" fill="#5df2cf"><animate attributeName="opacity" values="1;0.2;1" dur="1.6s" repeatCount="indefinite"/></circle>
+    <circle cx="22" cy="0" r="4" fill="#7c8cff"><animate attributeName="opacity" values="1;0.2;1" dur="1.6s" begin="0.3s" repeatCount="indefinite"/></circle>
+    <circle cx="38" cy="0" r="4" fill="#ffc86b"><animate attributeName="opacity" values="1;0.2;1" dur="1.6s" begin="0.6s" repeatCount="indefinite"/></circle>
+  </g>
+</svg>
